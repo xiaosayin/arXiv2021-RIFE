@@ -42,7 +42,7 @@ args = parser.parse_args()
 def yuv1d2rgb(yuv1d):
     yuv_matrix = np.array(list(yuv1d)).reshape(int(height * 3 / 2), width)
     yuv_matrix = yuv_matrix.astype('uint8')
-    rgb_frame = cv2.cvtColor(yuv_matrix, cv2.COLOR_YUV420p2RGB)
+    rgb_frame = cv2.cvtColor(yuv_matrix, cv2.COLOR_YUV420p2BGR)
     return rgb_frame
 
 
