@@ -41,7 +41,7 @@ args = parser.parse_args()
 
 # convert 1d yuv frame data to rgb matrix
 def yuv1d2rgb(yuv1d):
-    if len(yuv1d) == 0:
+    if yuv1d == None:
         return None
     yuv_matrix = np.array(list(yuv1d)).reshape(int(height * 3 / 2), width)
     yuv_matrix = yuv_matrix.astype('uint8')
@@ -53,7 +53,7 @@ def yuv1d2rgb(yuv1d):
 def read_frame(read_buffer, fifo_path):
     f_v = os.open(fifo_path, os.O_RDONLY)
     while True:
-        read_buffer.put(yuv1d2rgb(os.read(f_v, FRAME_SIZE)))
+        read_buffer.put(os.read(f_v, FRAME_SIZE))
 
 
 # Create fifo if it doesn't exist
@@ -64,7 +64,7 @@ if os.path.exists("/home/yinwenpei/rtc_signal/filename.txt"):
     os.remove("/home/yinwenpei/rtc_signal/filename.txt")
 
 # fifo frame buffer
-read_buffer = MPQueue()
+read_buffer = MPQueue(-1)
 
 # start read fifo
 p_test_read = Process(target=read_frame, args=(read_buffer, FIFO_PATH))
@@ -113,7 +113,7 @@ model.device()
 
 fourcc = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')
 print("listening on fifo")
-lastframe = read_buffer.get()
+lastframe = yuv1d2rgb(read_buffer.get())
 
 # set output parameters
 vid_out_name = None
@@ -198,13 +198,18 @@ count = 0
 while True:
     if os.path.exists("/home/yinwenpei/rtc_signal/filename.txt"):
         read_buffer.put(None)
+    # if read_buffer.get() != None:
+    #     count += 1
+    # else:
+    #     break
     if temp is not None:
         frame = temp
         temp = None
     else:
-        frame = read_buffer.get()
+        frame = yuv1d2rgb(read_buffer.get())
     if frame is None:
         break
+    count += 1
     I0 = I1
     I1 = torch.from_numpy(np.transpose(frame, (2,0,1))).to(device, non_blocking=True).unsqueeze(0).float() / 255.
     I1 = pad_image(I1)
@@ -214,7 +219,8 @@ while True:
 
     break_flag = False
     if ssim > 0.996:
-        frame = read_buffer.get()  # read a new frame
+        frame = yuv1d2rgb(read_buffer.get())  # read a new frame
+        count += 1
         if frame is None:
             break_flag = True
             frame = lastframe
@@ -273,7 +279,7 @@ if not vid_out is None:
 p_test_read.kill()
 
 os.remove(FIFO_PATH)
-
+print("count: ", count)
 print("all processes ended.")
 os._exit(0)
 
