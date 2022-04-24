@@ -112,6 +112,7 @@ model.eval()
 model.device()
 
 fourcc = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')
+print("listening on fifo")
 lastframe = read_buffer.get()
 
 # set output parameters
