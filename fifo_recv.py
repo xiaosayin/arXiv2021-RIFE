@@ -12,6 +12,7 @@ from multiprocessing import Process
 from queue import Queue, Empty
 from model.pytorch_msssim import ssim_matlab
 import time
+import sys
 
 FIFO_PATH = "/home/yinwenpei/rtc_signal/v_fifo"
 FRAME_SIZE = 1382400
@@ -40,6 +41,8 @@ args = parser.parse_args()
 
 # convert 1d yuv frame data to rgb matrix
 def yuv1d2rgb(yuv1d):
+    if len(yuv1d) == 0:
+        return None
     yuv_matrix = np.array(list(yuv1d)).reshape(int(height * 3 / 2), width)
     yuv_matrix = yuv_matrix.astype('uint8')
     rgb_frame = cv2.cvtColor(yuv_matrix, cv2.COLOR_YUV420p2BGR)
@@ -108,7 +111,7 @@ except:
 model.eval()
 model.device()
 
-fourcc = cv2.VideoWriter_fourcc('I', '4', '2', '0')
+fourcc = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')
 lastframe = read_buffer.get()
 
 # set output parameters
@@ -118,7 +121,7 @@ vid_out = None
 if args.output is not None:
     vid_out_name = args.output
 else:
-    vid_out_name = 'out_video.avi'
+    vid_out_name = 'out_video.mp4'
 vid_out = cv2.VideoWriter(vid_out_name, fourcc, args.fps, (width, height))
 
 
@@ -265,6 +268,13 @@ while (not write_buffer.empty()):
 # pbar.close()
 if not vid_out is None:
     vid_out.release()
+
+p_test_read.kill()
+
+os.remove(FIFO_PATH)
+
+print("all processes ended.")
+os._exit(0)
 
     # tmp = read_buffer.get()
     # yuv_matrix = np.array(list(read_buffer.get())).reshape(int(height * 3 / 2), width)
