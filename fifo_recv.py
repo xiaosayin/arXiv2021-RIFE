@@ -113,6 +113,7 @@ model.device()
 
 fourcc = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')
 print("listening on fifo")
+print("read_buffer_size: ", read_buffer.qsize())
 lastframe = yuv1d2rgb(read_buffer.get())
 
 # set output parameters
@@ -196,8 +197,11 @@ temp = None # save lastframe when processing static frameni
 
 count = 0
 while True:
-    if os.path.exists("/home/yinwenpei/rtc_signal/filename.txt"):
-        read_buffer.put(None)
+    print("read_buffer_size: ", read_buffer.qsize())
+    if(read_buffer.qsize()==0):
+        break
+    # if os.path.exists("/home/yinwenpei/rtc_signal/filename.txt"):
+    #     read_buffer.put(None)
     # if read_buffer.get() != None:
     #     count += 1
     # else:
@@ -206,7 +210,10 @@ while True:
         frame = temp
         temp = None
     else:
-        frame = yuv1d2rgb(read_buffer.get())
+        try:
+            frame = yuv1d2rgb(read_buffer.get())
+        except:
+            frame = None
     if frame is None:
         break
     count += 1
@@ -219,8 +226,11 @@ while True:
 
     break_flag = False
     if ssim > 0.996:
-        frame = yuv1d2rgb(read_buffer.get())  # read a new frame
-        count += 1
+        try:
+            frame = yuv1d2rgb(read_buffer.get())  # read a new frame
+            count += 1
+        except:
+            frame = None
         if frame is None:
             break_flag = True
             frame = lastframe
