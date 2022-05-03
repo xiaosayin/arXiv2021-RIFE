@@ -12,7 +12,7 @@ import numpy
 import random
 import logging
 import numpy as np
-from scipy.misc import imsave, imresize
+# from scipy.misc import imsave, imresize
 import matplotlib as mpl
 # mpl.use('Agg')
 import matplotlib.pyplot as plt
@@ -20,10 +20,15 @@ import matplotlib.pyplot as plt
 from skimage.color import rgb2yuv, yuv2rgb
 
 import os
-from scipy.misc import imread, imsave, imshow, imresize, imsave
+# from scipy.misc import imread, imsave, imshow, imresize, imsave
+from imageio import imread, imsave
+# from scipy.misc import imshow, imresize
 from shutil import copyfile
-from skimage.measure import compare_ssim, compare_psnr
+# from skimage.measure import compare_ssim, compare_psnr
+from skimage.metrics import structural_similarity as compare_ssim
+from skimage.metrics import peak_signal_noise_ratio as compare_psnr
 
+from ywpscipy_msic_imresize import scipy_misc_imresize as imresize
 
 # from PYTHON_Flow2Color.flowToColor import flowToColor
 # from PYTHON_Flow2Color.writeFlowFile import writeFlowFile
