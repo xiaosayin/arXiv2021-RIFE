@@ -43,8 +43,10 @@ args = parser.parse_args()
 def yuv1d2rgb(yuv1d):
     if yuv1d == None:
         return None
-    yuv_matrix = np.array(list(yuv1d)).reshape(int(height * 3 / 2), width)
-    yuv_matrix = yuv_matrix.astype('uint8')
+    # yuv_matrix = np.array(list(yuv1d)).reshape(int(height * 3 / 2), width)
+    # yuv_matrix = yuv_matrix.astype('uint8')
+    yuv_matrix = np.frombuffer(yuv1d,dtype=np.uint8,count = int(height * width * 1.5),offset=0)
+    yuv_matrix = yuv_matrix.reshape(int(height * 3 / 2), width)
     rgb_frame = cv2.cvtColor(yuv_matrix, cv2.COLOR_YUV420p2BGR)
     return rgb_frame
 
@@ -53,7 +55,10 @@ def yuv1d2rgb(yuv1d):
 def read_frame(read_buffer, fifo_path):
     f_v = os.open(fifo_path, os.O_RDONLY)
     while True:
-        read_buffer.put(os.read(f_v, FRAME_SIZE))
+        temp_ele = os.read(f_v, FRAME_SIZE)
+        if len(temp_ele) == 0:
+            break
+        read_buffer.put(temp_ele)
 
 
 # Create fifo if it doesn't exist
@@ -111,10 +116,6 @@ except:
 model.eval()
 model.device()
 
-fourcc = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')
-print("listening on fifo")
-print("read_buffer_size: ", read_buffer.qsize())
-lastframe = yuv1d2rgb(read_buffer.get())
 
 # set output parameters
 vid_out_name = None
@@ -122,8 +123,13 @@ vid_out = None
 
 if args.output is not None:
     vid_out_name = args.output
+    if(args.output[-3:] == "avi"):
+        fourcc = cv2.VideoWriter_fourcc('I', '4', '2', '0')
+    else:
+        fourcc = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')
 else:
     vid_out_name = 'out_video.mp4'
+    fourcc = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')
 vid_out = cv2.VideoWriter(vid_out_name, fourcc, args.fps, (width, height))
 
 
@@ -182,6 +188,10 @@ ph = ((height - 1) // tmp + 1) * tmp
 pw = ((width - 1) // tmp + 1) * tmp
 padding = (0, pw - width, 0, ph - height)
 
+print("listening on fifo")
+print("read_buffer_size: ", read_buffer.qsize())
+lastframe = yuv1d2rgb(read_buffer.get())
+
 if args.montage:
     lastframe = lastframe[:, left: left + width]
 write_buffer = Queue(maxsize=500)
@@ -197,6 +207,7 @@ temp = None # save lastframe when processing static frameni
 
 count = 0
 while True:
+    time_start_ns = time.time_ns()
     print("read_buffer_size: ", read_buffer.qsize())
     if(read_buffer.qsize()==0):
         break
@@ -263,7 +274,7 @@ while True:
         write_buffer.put(np.concatenate((lastframe, lastframe), 1))
         for mid in output:
             mid = (((mid[0] * 255.).byte().cpu().numpy().transpose(1, 2, 0)))
-            write_buffer.put(np.concatenate((lastframe, mid[:h, :w]), 1))
+            write_buffer.put(np.concatenate((lastframe, mid[:height, :width]), 1))
     else:
         write_buffer.put(lastframe)
         for mid in output:
@@ -273,6 +284,8 @@ while True:
     lastframe = frame
     if break_flag:
         break
+    time_end_ns = time.time_ns()
+    print("one loop time(ms):",(time_end_ns-time_start_ns)/1000000.0)
 
 
 if args.montage:
